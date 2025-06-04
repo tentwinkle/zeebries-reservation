@@ -21,15 +21,25 @@ export const Dashboard = (): JSX.Element => {
   const [reservations, setReservations] = useState<any[]>([]);
   const [discountCodes, setDiscountCodes] = useState<any[]>([]);
   const [flexiblePriceOptions, setFlexiblePriceOptions] = useState<any[]>([]);
-  // const [bungalows, setBungalows] = useState<any[]>([]);
+  const [bungalows, setBungalows] = useState<any[]>([]);
+  const [newBungalow, setNewBungalow] = useState({
+    name: '',
+    image: '',
+    price: '',
+    persons: '',
+    bedrooms: '',
+    description: '',
+    images: ''
+  });
+  const [showForm, setShowForm] = useState(false);
   // const [amenities, setAmenities] = useState<any[]>([]);
   // const [guests, setGuests] = useState<any[]>([]);
 
   useEffect(() => {
     api.get('/reservations').then(res => setReservations(res.data)).catch(console.error);
     api.get('/discount-codes').then(res => setDiscountCodes(res.data)).catch(console.error);
-    api.get('/flexible-price-options').then(res => setFlexiblePriceOptions(res.data)).catch(console.error);  
-    // api.get('/bungalows').then(res => setBungalows(res.data)).catch(console.error);
+    api.get('/flexible-price-options').then(res => setFlexiblePriceOptions(res.data)).catch(console.error);
+    api.get('/bungalows').then(res => setBungalows(res.data)).catch(console.error);
     // api.get('/amenities').then(res => setAmenities(res.data)).catch(console.error);
     // api.get('/guests').then(res => setGuests(res.data)).catch(console.error);
   }, []);
@@ -47,16 +57,16 @@ export const Dashboard = (): JSX.Element => {
   }
 
   const calculateReport = () => {
-  const confirmedReservations = reservations.filter(reserve => reserve.status === "confirmed");
+    const confirmedReservations = reservations.filter(reserve => reserve.status === "confirmed");
 
-  const confirmedCount = confirmedReservations.length;
-  const profit = confirmedReservations.reduce(
-    (sum: number, a: { total_cost: any }) => sum + Number(a.total_cost),
-    0
-  );
+    const confirmedCount = confirmedReservations.length;
+    const profit = confirmedReservations.reduce(
+      (sum: number, a: { total_cost: any }) => sum + Number(a.total_cost),
+      0
+    );
 
-  return { confirmedCount, profit };
-};
+    return { confirmedCount, profit };
+  };
 
   return (
     <>
@@ -109,6 +119,61 @@ export const Dashboard = (): JSX.Element => {
                 </CardContent>
               </Card>
             </div>
+          </section>
+
+          {/* Bungalows Section */}
+          <section className="mt-16 px-40">
+            <h3 className="font-semibold text-black text-xl mb-4">Bungalows</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold text-black text-sm">Naam</TableHead>
+                  <TableHead className="font-semibold text-black text-sm">Prijs</TableHead>
+                  <TableHead className="font-semibold text-black text-sm">Personen</TableHead>
+                  <TableHead className="font-semibold text-black text-sm">Slaapkamers</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bungalows.map((b, idx) => (
+                  <TableRow key={idx} className="h-[81px] bg-white rounded-[10px]">
+                    <TableCell className="opacity-60 font-normal text-black text-2xl">{b.name}</TableCell>
+                    <TableCell className="opacity-60 font-normal text-black text-2xl">{b.price}</TableCell>
+                    <TableCell className="opacity-60 font-normal text-black text-2xl">{b.persons}</TableCell>
+                    <TableCell className="opacity-60 font-normal text-black text-2xl">{b.bedrooms}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="flex justify-center mt-8">
+              <Button size="icon" onClick={() => setShowForm(!showForm)} className="w-12 h-12 rounded-3xl bg-[#00a508] hover:bg-[#009407]">
+                <PlusIcon className="w-6 h-6 text-white" />
+              </Button>
+            </div>
+
+            {showForm && (
+              <div className="mt-4 space-y-2">
+                <input className="border p-2 w-full" placeholder="Naam" value={newBungalow.name} onChange={e => setNewBungalow({ ...newBungalow, name: e.target.value })} />
+                <input className="border p-2 w-full" placeholder="Image" value={newBungalow.image} onChange={e => setNewBungalow({ ...newBungalow, image: e.target.value })} />
+                <input className="border p-2 w-full" placeholder="Prijs" value={newBungalow.price} onChange={e => setNewBungalow({ ...newBungalow, price: e.target.value })} />
+                <input className="border p-2 w-full" placeholder="Personen" value={newBungalow.persons} onChange={e => setNewBungalow({ ...newBungalow, persons: e.target.value })} />
+                <input className="border p-2 w-full" placeholder="Slaapkamers" value={newBungalow.bedrooms} onChange={e => setNewBungalow({ ...newBungalow, bedrooms: e.target.value })} />
+                <textarea className="border p-2 w-full" placeholder="Beschrijving" value={newBungalow.description} onChange={e => setNewBungalow({ ...newBungalow, description: e.target.value })} />
+                <input className="border p-2 w-full" placeholder="Afbeeldingen (comma separated)" value={newBungalow.images} onChange={e => setNewBungalow({ ...newBungalow, images: e.target.value })} />
+                <Button
+                  onClick={async () => {
+                    const payload = { ...newBungalow, images: newBungalow.images.split(',').map(i => i.trim()) };
+                    await api.post('/bungalows', payload);
+                    const res = await api.get('/bungalows');
+                    setBungalows(res.data);
+                    setNewBungalow({ name: '', image: '', price: '', persons: '', bedrooms: '', description: '', images: '' });
+                    setShowForm(false);
+                  }}
+                  className="bg-[#009416] text-white"
+                >
+                  Opslaan
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Recent Bookings Section */}
