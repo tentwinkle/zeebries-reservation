@@ -34,8 +34,14 @@ export default function CreateReserve() {
   const [bungalows, setBungalows] = useState<Bungalow[]>([]);
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([]);
   const [amenities, setAmenities] = useState<Amenity[]>([]);
-  const [selectedAmenities, setSelectedAmenities] = useState<Amenity[]>([]);
-  const [selectedBungalow, setSelectedBungalow] = useState<Bungalow | null>(null);
+  interface SelectedBungalow {
+    bungalow: Bungalow | null;
+    guests: number;
+    amenities: Amenity[];
+  }
+  const [selections, setSelections] = useState<SelectedBungalow[]>([
+    { bungalow: null, guests: 1, amenities: [] }
+  ]);
   const [discountCode, setDiscountCode] = useState<string>('');
   const [discountValid, setDiscountValid] = useState(true);
 
@@ -51,9 +57,7 @@ export default function CreateReserve() {
   const [reservationData, setReservationData] = useState({
     startDate: '',
     endDate: '',
-    guests: 1,
     phone2: '',
-    bungalowId: 0,
   });
 
   useEffect(() => {
@@ -68,20 +72,25 @@ export default function CreateReserve() {
 
     if (bungalows.length && selectedBungalowId) {
       const found = bungalows.find(b => b.id === parseInt(selectedBungalowId));
-      console.log(found);
       if (found) {
-        setSelectedBungalow(found);
-        setReservationData(prev => ({ ...prev, bungalowId: found.id }));
+        setSelections([{ bungalow: found, guests: 1, amenities: [] }]);
       }
     }
   }, [bungalows]);
 
-  const toggleAmenity = (amenity: Amenity) => {
-    if (selectedAmenities.includes(amenity)) {
-      setSelectedAmenities(selectedAmenities.filter(a => a !== amenity));
-    } else {
-      setSelectedAmenities([...selectedAmenities, amenity]);
-    }
+  const toggleAmenity = (index: number, amenity: Amenity) => {
+    setSelections(prev => {
+      const copy = [...prev];
+      const sel = copy[index];
+      if (!sel) return prev;
+      if (sel.amenities.includes(amenity)) {
+        sel.amenities = sel.amenities.filter(a => a !== amenity);
+      } else {
+        sel.amenities = [...sel.amenities, amenity];
+      }
+      copy[index] = sel;
+      return copy;
+    });
   };
 
   const handlePersonalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +103,30 @@ export default function CreateReserve() {
     setReservationData(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleSelectionChange = (
+    index: number,
+    field: 'bungalow' | 'guests',
+    value: string
+  ) => {
+    setSelections(prev => {
+      const copy = [...prev];
+      const sel = copy[index];
+      if (!sel) return prev;
+      if (field === 'bungalow') {
+        const b = bungalows.find(b => b.id === parseInt(value));
+        sel.bungalow = b || null;
+      } else {
+        sel.guests = parseInt(value) || 1;
+      }
+      copy[index] = sel;
+      return copy;
+    });
+  };
+
+  const addBungalowSelection = () => {
+    setSelections(prev => [...prev, { bungalow: null, guests: 1, amenities: [] }]);
+  };
+
   const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.trim();
     setDiscountCode(code);
@@ -101,7 +134,7 @@ export default function CreateReserve() {
   };
 
   const handleSubmit = async () => {
-    if (!personalData.firstName || !personalData.lastName || !reservationData.startDate || !selectedBungalow) {
+    if (!personalData.firstName || !personalData.lastName || !reservationData.startDate || selections.some(s => !s.bungalow)) {
       toast.warning('Vul alle verplichte velden in.');
       return;
     }
@@ -118,16 +151,18 @@ export default function CreateReserve() {
       const guestRes = await api.post('/guests', guestPayload);
       const guestId = guestRes.data.id;
 
-      const reservationPayload = {
-        start_date: reservationData.startDate,
-        end_date: reservationData.endDate,
-        discount_code_id: discountCodes.find(d => d.code === discountCode)?.id,
-        bungalow_id: selectedBungalow.id,
-        guest_id: guestId,
-        total_cost: calculateTotal(),
-      };
+      for (const sel of selections) {
+        const reservationPayload = {
+          start_date: reservationData.startDate,
+          end_date: reservationData.endDate,
+          discount_code_id: discountCodes.find(d => d.code === discountCode)?.id,
+          bungalow_id: sel.bungalow!.id,
+          guest_id: guestId,
+          total_cost: calculateBungalowTotal(sel),
+        };
 
-      await api.post('/reservations', reservationPayload);
+        await api.post('/reservations', reservationPayload);
+      }
       // Show success toast
       toast.success('Reservering succesvol!');
       setTimeout(() => {
@@ -139,21 +174,22 @@ export default function CreateReserve() {
     }
   };
 
-  const calculateTotal = () => {
-    const basePrice = Number(selectedBungalow?.price) || 0;
-    const extras = selectedAmenities.reduce((sum, a) => sum + Number(a.price), 0);
+  const calculateBungalowTotal = (sel: SelectedBungalow) => {
+    const basePrice = sel.bungalow ? Number(sel.bungalow.price) : 0;
+    const extras = sel.amenities.reduce((sum, a) => sum + Number(a.price), 0);
 
-    // Calculate number of nights
     const start = new Date(reservationData.startDate);
     const end = new Date(reservationData.endDate);
     const timeDiff = end.getTime() - start.getTime();
     const nights = timeDiff > 0 ? Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) : 0;
 
-    const stayPrice = basePrice * nights;
-    const total = stayPrice + extras;
+    return basePrice * nights + extras;
+  };
 
+  const calculateTotal = () => {
+    const subtotal = selections.reduce((sum, sel) => sum + calculateBungalowTotal(sel), 0);
     const discount = discountCodes.find(d => d.code === discountCode)?.percentage || 0;
-    return discountValid ? total - (total * discount / 100) : total;
+    return discountValid ? subtotal - (subtotal * discount / 100) : subtotal;
   };
 
   return (
@@ -194,49 +230,57 @@ export default function CreateReserve() {
                 <Input id="endDate" placeholder="Vertrek" type="date" value={reservationData.endDate} onChange={handleReservationChange} />
               </div>
 
-              {/* Bungalows */}
-              <Select
-                value={selectedBungalow ? String(selectedBungalow.id) : ''}
-                onValueChange={value => {
-                  const bungalow = bungalows.find(b => b.id === parseInt(value));
-                  if (bungalow) {
-                    setSelectedBungalow(bungalow);
-                    setReservationData(prev => ({ ...prev, bungalowId: bungalow.id }));
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full rounded-[10px]  px-3 py-6 text-lg text-black">
-                  <SelectValue placeholder="Kies een bungalow" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bungalows.map(bungalow => (
-                    <SelectItem key={bungalow.id} value={String(bungalow.id)}>
-                      {bungalow.name} – €{bungalow.price}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {selections.map((sel, idx) => (
+                <div key={idx} className="mb-6 border p-4 rounded-xl">
+                  <Select
+                    value={sel.bungalow ? String(sel.bungalow.id) : ''}
+                    onValueChange={val => handleSelectionChange(idx, 'bungalow', val)}
+                  >
+                    <SelectTrigger className="w-full rounded-[10px] px-3 py-6 text-lg text-black">
+                      <SelectValue placeholder="Kies een bungalow" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bungalows.map(bungalow => (
+                        <SelectItem key={bungalow.id} value={String(bungalow.id)}>
+                          {bungalow.name} – €{bungalow.price}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              <div className="grid grid-cols-2 gap-4 mt-4 text-black">
-                <Input id="guests" placeholder="Aantal gasten" type="number" min={1} value={reservationData.guests} onChange={handleReservationChange} />
-                <Input id="phone2" placeholder="Telefoonnummer" value={reservationData.phone2} onChange={handleReservationChange} />
-              </div>
-            </section>
-
-            {/* Amenities */}
-            <section>
-              <h3 className="mb-4 text-xl font-semibold text-black">Extra voorzieningen</h3>
-              <div className="space-y-2 text-black">
-                {amenities.map(amenity => (
-                  <div key={amenity.name} className="flex items-center space-x-3 cursor-pointer" onClick={() => toggleAmenity(amenity)}>
-                    <div className={`flex h-5 w-5 items-center justify-center rounded border-2 border-black ${selectedAmenities.includes(amenity) ? 'bg-black' : ''}`}>
-                      {selectedAmenities.includes(amenity) && <CheckIcon className="h-3 w-3 text-white" />}
-                    </div>
-                    <Label className="text-xl">{amenity.label}, +{amenity.price},-</Label>
+                  <div className="grid grid-cols-2 gap-4 mt-4 text-black">
+                    <Input
+                      placeholder="Aantal gasten"
+                      type="number"
+                      min={1}
+                      value={sel.guests}
+                      onChange={e => handleSelectionChange(idx, 'guests', e.target.value)}
+                    />
+                    <Input id="phone2" placeholder="Telefoonnummer" value={reservationData.phone2} onChange={handleReservationChange} />
                   </div>
-                ))}
-              </div>
+
+                  <div className="mt-4 space-y-2 text-black">
+                    {amenities.map(am => (
+                      <div
+                        key={am.name}
+                        className="flex items-center space-x-3 cursor-pointer"
+                        onClick={() => toggleAmenity(idx, am)}
+                      >
+                        <div
+                          className={`flex h-5 w-5 items-center justify-center rounded border-2 border-black ${sel.amenities.includes(am) ? 'bg-black' : ''}`}
+                        >
+                          {sel.amenities.includes(am) && <CheckIcon className="h-3 w-3 text-white" />}
+                        </div>
+                        <Label className="text-xl">{am.label}, +{am.price},-</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <Button type="button" onClick={addBungalowSelection} className="mt-2">Voeg bungalow toe</Button>
             </section>
+
 
             {/* Payment Methods */}
             <section>
