@@ -22,10 +22,6 @@ interface Bungalow {
 export default function Home() {
   const { auth } = usePage<SharedData>().props;
   const [bungalows, setBungalows] = useState<Bungalow[]>([]);
-  const [filtered, setFiltered] = useState<Bungalow[]>([]);
-  const [search, setSearch] = useState('');
-  const [persons, setPersons] = useState('');
-  const [price, setPrice] = useState('');
 
   useEffect(() => {
     api.get('/bungalows')
@@ -35,18 +31,9 @@ export default function Home() {
           images: typeof b.images === 'string' ? JSON.parse(b.images) : b.images
         }));
         setBungalows(parsed);
-        setFiltered(parsed);
       })
       .catch(console.error);
   }, []);
-
-  useEffect(() => {
-    let data = [...bungalows];
-    if (search) data = data.filter(b => b.name.toLowerCase().includes(search.toLowerCase()));
-    if (persons) data = data.filter(b => b.persons >= parseInt(persons));
-    if (price) data = data.filter(b => b.price <= parseFloat(price));
-    setFiltered(data);
-  }, [search, persons, price, bungalows]);
 
   return (
     <>
@@ -90,9 +77,7 @@ export default function Home() {
                     <span className="text-[14px] font-semibold text-white">Wie</span>
                     <div className="rounded">
                       <input
-                        type="number"
-                        value={persons}
-                        onChange={e => setPersons(e.target.value)}
+                        type="text"
                         placeholder="Aantal gasten"
                         className="w-[100px] bg-transparent text-[14px] text-white placeholder-white/60 outline-none"
                       />
@@ -105,9 +90,7 @@ export default function Home() {
                     <span className="text-[14px] font-semibold text-white">Hoeveel</span>
                     <div className="rounded">
                       <input
-                        type="number"
-                        value={price}
-                        onChange={e => setPrice(e.target.value)}
+                        type="text"
                         placeholder="Prijs"
                         className="w-[100px] bg-transparent text-[14px] text-white placeholder-white/60 outline-none"
                       />
@@ -121,9 +104,7 @@ export default function Home() {
                     <div className="rounded">
                       <input
                         type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Zoek"
+                        placeholder="Kies extras"
                         className="w-[100px] bg-transparent text-[14px] text-white placeholder-white/60 outline-none"
                       />
                     </div>
@@ -141,7 +122,7 @@ export default function Home() {
             <h2 className="font-['Inter',Helvetica] text-2xl font-semibold text-black underline md:text-[32px]">Alle bungalows</h2>
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:mt-10 md:grid-cols-2 md:gap-10 lg:grid-cols-3">
-              {filtered.map((bungalow) => (
+              {bungalows.map((bungalow) => (
                 <Dialog key={bungalow.id}>
                   <DialogTrigger asChild>
                     <div className="mx-auto w-full max-w-[364px] cursor-pointer transition duration-300 hover:opacity-90">

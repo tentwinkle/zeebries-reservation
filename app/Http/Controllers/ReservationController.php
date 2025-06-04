@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\ReservationConfirmation;
 
 class ReservationController extends Controller
 {
@@ -41,13 +39,7 @@ class ReservationController extends Controller
         // Set default status if not provided or empty
         $data['status'] = $data['status'] ?? 'pending';
 
-        $reservation = Reservation::create($data);
-        $reservation->load(['guest', 'bungalow']);
-
-        Mail::to($reservation->guest->email)
-            ->send(new ReservationConfirmation($reservation));
-
-        return $reservation;
+        return Reservation::create($data);
     }
 
     /**
