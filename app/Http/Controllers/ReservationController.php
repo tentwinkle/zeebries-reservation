@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Reservation;
+use App\Models\{Reservation, Bungalow, Amenity};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use App\Mail\ReservationConfirmation;
+use Carbon\Carbon;
 
 class ReservationController extends Controller
 {
@@ -13,7 +15,7 @@ class ReservationController extends Controller
      * Display a listing of the resource.
      */
     public function index() {
-        return Reservation::with(['guest', 'bungalow', 'discountCode'])->get();
+        return Reservation::with(['guest', 'items.bungalow', 'items.amenities', 'discountCode'])->get();
     }
 
     /**
@@ -30,20 +32,57 @@ class ReservationController extends Controller
     public function store(Request $request) {
         $data = $request->validate([
             'guest_id' => 'required|exists:guests,id',
-            'bungalow_id' => 'required|exists:bungalows,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'status' => 'nullable|string',
             'discount_code_id' => 'nullable|exists:discount_codes,id',
-            'total_cost' => 'required|numeric'
+            'total_cost' => 'required|numeric',
+            'items' => 'required|array|min:1',
+            'items.*.bungalow_id' => 'required|exists:bungalows,id',
+            'items.*.guests' => 'required|integer|min:1',
+            'items.*.amenities' => 'array',
+            'items.*.amenities.*' => 'exists:amenities,id'
         ]);
 
         // Set default status if not provided or empty
         $data['status'] = $data['status'] ?? 'pending';
+        $items = $data['items'];
+        unset($data['items']);
 
+        $nights = Carbon::parse($data['start_date'])->diffInDays(Carbon::parse($data['end_date']));
+
+        DB::beginTransaction();
         $reservation = Reservation::create($data);
-        $reservation->load(['guest', 'bungalow']);
 
+        $total = 0;
+        foreach ($items as $item) {
+            $bungalow = Bungalow::find($item['bungalow_id']);
+            $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])->get();
+            $cost = ($bungalow->price * $nights) + $amenities->sum('price');
+
+            $resItem = $reservation->items()->create([
+                'bungalow_id' => $bungalow->id,
+                'guests' => $item['guests'],
+                'total_cost' => $cost
+            ]);
+
+            if ($amenities->count()) {
+                $resItem->amenities()->sync($amenities->pluck('id'));
+            }
+
+            $total += $cost;
+        }
+
+        if ($reservation->discount_code_id) {
+            $discount = $reservation->discountCode->percentage ?? 0;
+            $total -= $total * $discount / 100;
+        }
+
+        $reservation->total_cost = $total;
+        $reservation->save();
+        DB::commit();
+
+        $reservation->load(['guest', 'items.bungalow', 'items.amenities']);
         Mail::to($reservation->guest->email)
             ->send(new ReservationConfirmation($reservation));
 
@@ -54,7 +93,7 @@ class ReservationController extends Controller
      * Display the specified resource.
      */
     public function show(Reservation $reservation) {
-        return $reservation->load(['guest', 'bungalow', 'discountCode']);
+        return $reservation->load(['guest', 'items.bungalow', 'items.amenities', 'discountCode']);
     }
 
     /**
@@ -66,7 +105,7 @@ class ReservationController extends Controller
             ->whereHas('guest', function ($query) use ($request) {
                 $query->where('email', $request->get('email'));
             })
-            ->with(['guest', 'bungalow'])
+            ->with(['guest', 'items.bungalow', 'items.amenities'])
             ->first();
 
         if (!$reservation) {
@@ -88,8 +127,53 @@ class ReservationController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, Reservation $reservation) {
-        $reservation->update($request->all());
-        return $reservation;
+        $data = $request->validate([
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date|after:start_date',
+            'status' => 'sometimes|string',
+            'discount_code_id' => 'sometimes|exists:discount_codes,id',
+            'total_cost' => 'sometimes|numeric',
+            'items' => 'sometimes|array',
+            'items.*.bungalow_id' => 'required_with:items|exists:bungalows,id',
+            'items.*.guests' => 'required_with:items|integer|min:1',
+            'items.*.amenities' => 'array',
+            'items.*.amenities.*' => 'exists:amenities,id'
+        ]);
+
+        $items = $data['items'] ?? null;
+        unset($data['items']);
+        $reservation->update($data);
+
+        if ($items !== null) {
+            // remove old items
+            foreach ($reservation->items as $it) { $it->amenities()->detach(); }
+            $reservation->items()->delete();
+
+            $nights = Carbon::parse($reservation->start_date)->diffInDays(Carbon::parse($reservation->end_date));
+            $total = 0;
+            foreach ($items as $item) {
+                $bungalow = Bungalow::find($item['bungalow_id']);
+                $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])->get();
+                $cost = ($bungalow->price * $nights) + $amenities->sum('price');
+                $resItem = $reservation->items()->create([
+                    'bungalow_id' => $bungalow->id,
+                    'guests' => $item['guests'],
+                    'total_cost' => $cost
+                ]);
+                if ($amenities->count()) {
+                    $resItem->amenities()->sync($amenities->pluck('id'));
+                }
+                $total += $cost;
+            }
+            if ($reservation->discount_code_id) {
+                $discount = $reservation->discountCode->percentage ?? 0;
+                $total -= $total * $discount / 100;
+            }
+            $reservation->total_cost = $total;
+            $reservation->save();
+        }
+
+        return $reservation->load(['items.bungalow', 'items.amenities']);
     }
 
     /**

@@ -12,4 +12,9 @@ class Amenity extends Model
     {
         return $this->belongsToMany(Bungalow::class);
     }
+    
+    public function reservationItems()
+    {
+        return $this->belongsToMany(ReservationItem::class, 'amenity_reservation_item');
+    }
 }

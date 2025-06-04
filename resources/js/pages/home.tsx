@@ -90,7 +90,7 @@ export default function Home() {
                     <span className="text-[14px] font-semibold text-white">Wie</span>
                     <div className="rounded">
                       <input
-                        type="number"
+                        type="text"
                         value={persons}
                         onChange={e => setPersons(e.target.value)}
                         placeholder="Aantal gasten"
@@ -105,7 +105,7 @@ export default function Home() {
                     <span className="text-[14px] font-semibold text-white">Hoeveel</span>
                     <div className="rounded">
                       <input
-                        type="number"
+                        type="text"
                         value={price}
                         onChange={e => setPrice(e.target.value)}
                         placeholder="Prijs"

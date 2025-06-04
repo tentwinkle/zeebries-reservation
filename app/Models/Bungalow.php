@@ -17,6 +17,11 @@ class Bungalow extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    public function reservationItems()
+    {
+        return $this->hasMany(ReservationItem::class);
+    }
+
     public function amenities()
     {
         return $this->belongsToMany(Amenity::class);

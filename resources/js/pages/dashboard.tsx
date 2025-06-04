@@ -151,7 +151,7 @@ export const Dashboard = (): JSX.Element => {
             </div>
 
             {showForm && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2 text-black">
                 <input className="border p-2 w-full" placeholder="Naam" value={newBungalow.name} onChange={e => setNewBungalow({ ...newBungalow, name: e.target.value })} />
                 <input className="border p-2 w-full" placeholder="Image" value={newBungalow.image} onChange={e => setNewBungalow({ ...newBungalow, image: e.target.value })} />
                 <input className="border p-2 w-full" placeholder="Prijs" value={newBungalow.price} onChange={e => setNewBungalow({ ...newBungalow, price: e.target.value })} />

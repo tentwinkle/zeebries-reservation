@@ -23,6 +23,7 @@ interface DiscountCode {
 }
 
 interface Amenity {
+  id: number;
   name: string;
   label: string;
   price: number;
@@ -152,18 +153,22 @@ export default function CreateReserve() {
       const guestRes = await api.post('/guests', guestPayload);
       const guestId = guestRes.data.id;
 
-      for (const sel of selections) {
-        const reservationPayload = {
-          start_date: reservationData.startDate,
-          end_date: reservationData.endDate,
-          discount_code_id: discountCodes.find(d => d.code === discountCode)?.id,
-          bungalow_id: sel.bungalow!.id,
-          guest_id: guestId,
-          total_cost: calculateBungalowTotal(sel),
-        };
+      const items = selections.map(sel => ({
+        bungalow_id: sel.bungalow!.id,
+        guests: sel.guests,
+        amenities: sel.amenities.map(a => a.id),
+      }));
 
-        await api.post('/reservations', reservationPayload);
-      }
+      const reservationPayload = {
+        start_date: reservationData.startDate,
+        end_date: reservationData.endDate,
+        discount_code_id: discountCodes.find(d => d.code === discountCode)?.id,
+        guest_id: guestId,
+        total_cost: calculateTotal(),
+        items,
+      };
+
+      await api.post('/reservations', reservationPayload);
       // Show success toast
       toast.success('Reservering succesvol!');
       setTimeout(() => {

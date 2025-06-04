@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Reservation extends Model
 {
     protected $fillable = [
-        'guest_id', 'bungalow_id', 'discount_code_id',
+        'guest_id', 'discount_code_id',
         'start_date', 'end_date', 'status', 'total_cost'
     ];
 
@@ -16,9 +16,9 @@ class Reservation extends Model
         return $this->belongsTo(Guest::class);
     }
 
-    public function bungalow()
+    public function items()
     {
-        return $this->belongsTo(Bungalow::class);
+        return $this->hasMany(ReservationItem::class);
     }
 
     public function discountCode()
