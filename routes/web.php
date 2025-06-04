@@ -1,19 +1,27 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+use Inertia\Inertia;
 
 Route::get('/', function () {
-    // Startpagina van de applicatie
-    return view('home');
+    return Inertia::render('home');
+})->name('home');
+
+Route::get('/create-reservation', function () {
+    return Inertia::render('create-reservation');
+})->name('create-reservation');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('dashboard');
 });
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/reservations', function () {
+        return Inertia::render('reservations');
+    })->name('reservations');
+});
+
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';

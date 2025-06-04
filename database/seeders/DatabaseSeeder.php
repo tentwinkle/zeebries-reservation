@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -11,13 +13,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Roep de individuele seeders aan
+        User::factory()->create([
+            'name' => 'Admin',
+            'email' => 'admin@zeebries.com',
+        ]);
+
         $this->call([
-            EmployeeSeeder::class,
             GuestSeeder::class,
+            AmenitySeeder::class,
             BungalowSeeder::class,
-            ReservationSeeder::class,
             DiscountCodeSeeder::class,
+            FlexiblePriceOptionSeeder::class,
+            ReservationSeeder::class,
         ]);
     }
 }

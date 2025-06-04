@@ -2,24 +2,23 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\DiscountCode;
+use Illuminate\Database\Seeder;
 
 class DiscountCodeSeeder extends Seeder
 {
     public function run(): void
     {
-        // Voorbeeld kortingscodes
         DiscountCode::create([
-            'code' => 'ZEEBRIES10',
+            'code' => 'SUMMER10',
+            'name' => 'Summer Discount',
             'percentage' => 10,
-            'name' => 'Voorjaarskorting',
         ]);
 
         DiscountCode::create([
-            'code' => 'ZEEBRIES20',
-            'percentage' => 20,
-            'name' => 'Zomerdeal',
+            'code' => 'WELCOME5',
+            'name' => 'First-Time Guest',
+            'percentage' => 5,
         ]);
     }
 }

@@ -2,19 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Model voor kortingscodes
- */
 class DiscountCode extends Model
 {
-    use HasFactory;
+    protected $fillable = ['code', 'name', 'percentage'];
 
-    protected $fillable = [
-        'code',
-        'percentage',
-        'name',
-    ];
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
 }

@@ -2,23 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Model voor bungalows
- */
 class Bungalow extends Model
 {
-    use HasFactory;
-
-    protected $fillable = [
-        'number',
-        'type',
-        'extra_amenities',
-    ];
+    protected $fillable = ['name', 'description', 'price', 'images', 'image', 'persons', 'bedrooms'];
 
     protected $casts = [
-        'extra_amenities' => 'array',
+        'images' => 'array',
     ];
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function amenities()
+    {
+        return $this->belongsToMany(Amenity::class);
+    }
+
+    public function flexiblePrices()
+    {
+        return $this->hasMany(FlexiblePriceOption::class);
+    }
 }
