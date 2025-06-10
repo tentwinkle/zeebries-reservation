@@ -24,15 +24,16 @@ export const Dashboard = (): JSX.Element => {
   const [bungalows, setBungalows] = useState<any[]>([]);
   const [newBungalow, setNewBungalow] = useState({
     name: '',
-    image: '',
+    imageFile: null as File | null,
     price: '',
     persons: '',
     bedrooms: '',
     description: '',
-    images: ''
+    imagesFiles: [] as File[]
   });
   const [showForm, setShowForm] = useState(false);
-  // const [amenities, setAmenities] = useState<any[]>([]);
+  const [amenities, setAmenities] = useState<any[]>([]);
+  const [selectedAmenities, setSelectedAmenities] = useState<number[]>([]);
   // const [guests, setGuests] = useState<any[]>([]);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export const Dashboard = (): JSX.Element => {
     api.get('/discount-codes').then(res => setDiscountCodes(res.data)).catch(console.error);
     api.get('/flexible-price-options').then(res => setFlexiblePriceOptions(res.data)).catch(console.error);
     api.get('/bungalows').then(res => setBungalows(res.data)).catch(console.error);
-    // api.get('/amenities').then(res => setAmenities(res.data)).catch(console.error);
+    api.get('/amenities').then(res => setAmenities(res.data)).catch(console.error);
     // api.get('/guests').then(res => setGuests(res.data)).catch(console.error);
   }, []);
 
@@ -131,6 +132,7 @@ export const Dashboard = (): JSX.Element => {
                   <TableHead className="font-semibold text-black text-sm">Prijs</TableHead>
                   <TableHead className="font-semibold text-black text-sm">Personen</TableHead>
                   <TableHead className="font-semibold text-black text-sm">Slaapkamers</TableHead>
+                  <TableHead className="font-semibold text-black text-sm">Acties</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -140,6 +142,15 @@ export const Dashboard = (): JSX.Element => {
                     <TableCell className="opacity-60 font-normal text-black text-2xl">{b.price}</TableCell>
                     <TableCell className="opacity-60 font-normal text-black text-2xl">{b.persons}</TableCell>
                     <TableCell className="opacity-60 font-normal text-black text-2xl">{b.bedrooms}</TableCell>
+                    <TableCell>
+                      <Button size="icon" onClick={async () => {
+                        await api.delete(`/bungalows/${b.id}`);
+                        const res = await api.get('/bungalows');
+                        setBungalows(res.data);
+                      }} className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700">
+                        <TrashIcon className="w-4 h-4 text-white" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -153,19 +164,38 @@ export const Dashboard = (): JSX.Element => {
             {showForm && (
               <div className="mt-4 space-y-2 text-black">
                 <input className="border p-2 w-full" placeholder="Naam" value={newBungalow.name} onChange={e => setNewBungalow({ ...newBungalow, name: e.target.value })} />
-                <input className="border p-2 w-full" placeholder="Image" value={newBungalow.image} onChange={e => setNewBungalow({ ...newBungalow, image: e.target.value })} />
+                <input type="file" className="border p-2 w-full" onChange={e => setNewBungalow({ ...newBungalow, imageFile: e.target.files ? e.target.files[0] : null })} />
                 <input className="border p-2 w-full" placeholder="Prijs" value={newBungalow.price} onChange={e => setNewBungalow({ ...newBungalow, price: e.target.value })} />
                 <input className="border p-2 w-full" placeholder="Personen" value={newBungalow.persons} onChange={e => setNewBungalow({ ...newBungalow, persons: e.target.value })} />
                 <input className="border p-2 w-full" placeholder="Slaapkamers" value={newBungalow.bedrooms} onChange={e => setNewBungalow({ ...newBungalow, bedrooms: e.target.value })} />
                 <textarea className="border p-2 w-full" placeholder="Beschrijving" value={newBungalow.description} onChange={e => setNewBungalow({ ...newBungalow, description: e.target.value })} />
-                <input className="border p-2 w-full" placeholder="Afbeeldingen (comma separated)" value={newBungalow.images} onChange={e => setNewBungalow({ ...newBungalow, images: e.target.value })} />
+                <input type="file" multiple className="border p-2 w-full" onChange={e => setNewBungalow({ ...newBungalow, imagesFiles: e.target.files ? Array.from(e.target.files) : [] })} />
+                <div className="flex flex-wrap gap-2">
+                  {amenities.map(am => (
+                    <label key={am.id} className="flex items-center space-x-2">
+                      <input type="checkbox" checked={selectedAmenities.includes(am.id)} onChange={() => {
+                        setSelectedAmenities(prev => prev.includes(am.id) ? prev.filter(a => a !== am.id) : [...prev, am.id]);
+                      }} />
+                      <span>{am.label}</span>
+                    </label>
+                  ))}
+                </div>
                 <Button
                   onClick={async () => {
-                    const payload = { ...newBungalow, images: newBungalow.images.split(',').map(i => i.trim()) };
-                    await api.post('/bungalows', payload);
+                    const form = new FormData();
+                    form.append('name', newBungalow.name);
+                    if (newBungalow.imageFile) form.append('image', newBungalow.imageFile);
+                    form.append('price', newBungalow.price);
+                    form.append('persons', newBungalow.persons);
+                    form.append('bedrooms', newBungalow.bedrooms);
+                    form.append('description', newBungalow.description);
+                    newBungalow.imagesFiles.forEach(f => form.append('images[]', f));
+                    selectedAmenities.forEach(id => form.append('amenities[]', String(id)));
+                    await api.post('/bungalows', form, { headers: { 'Content-Type': 'multipart/form-data' } });
                     const res = await api.get('/bungalows');
                     setBungalows(res.data);
-                    setNewBungalow({ name: '', image: '', price: '', persons: '', bedrooms: '', description: '', images: '' });
+                    setNewBungalow({ name: '', imageFile: null, price: '', persons: '', bedrooms: '', description: '', imagesFiles: [] });
+                    setSelectedAmenities([]);
                     setShowForm(false);
                   }}
                   className="bg-[#009416] text-white"

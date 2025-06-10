@@ -57,7 +57,10 @@ class ReservationController extends Controller
         $total = 0;
         foreach ($items as $item) {
             $bungalow = Bungalow::find($item['bungalow_id']);
-            $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])->get();
+            $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])
+                ->whereHas('bungalows', function ($q) use ($bungalow) {
+                    $q->where('bungalow_id', $bungalow->id);
+                })->get();
             $cost = ($bungalow->price * $nights) + $amenities->sum('price');
 
             $resItem = $reservation->items()->create([
@@ -153,7 +156,10 @@ class ReservationController extends Controller
             $total = 0;
             foreach ($items as $item) {
                 $bungalow = Bungalow::find($item['bungalow_id']);
-                $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])->get();
+                $amenities = Amenity::whereIn('id', $item['amenities'] ?? [])
+                    ->whereHas('bungalows', function ($q) use ($bungalow) {
+                        $q->where('bungalow_id', $bungalow->id);
+                    })->get();
                 $cost = ($bungalow->price * $nights) + $amenities->sum('price');
                 $resItem = $reservation->items()->create([
                     'bungalow_id' => $bungalow->id,
@@ -174,6 +180,13 @@ class ReservationController extends Controller
         }
 
         return $reservation->load(['items.bungalow', 'items.amenities']);
+    }
+
+    public function cancel(Reservation $reservation)
+    {
+        $reservation->status = 'cancelled';
+        $reservation->save();
+        return $reservation;
     }
 
     /**

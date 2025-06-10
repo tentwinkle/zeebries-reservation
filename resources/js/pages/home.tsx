@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -17,6 +18,7 @@ interface Bungalow {
   price: number;
   description: string;
   images: string[];
+  amenities: any[];
 }
 
 export default function Home() {
@@ -26,9 +28,10 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [persons, setPersons] = useState('');
   const [price, setPrice] = useState('');
+  const [date, setDate] = useState('');
 
-  useEffect(() => {
-    api.get('/bungalows')
+  const fetchBungalows = () => {
+    api.get('/bungalows', { params: { date } })
       .then(res => {
         const parsed = res.data.map((b: Bungalow) => ({
           ...b,
@@ -38,7 +41,11 @@ export default function Home() {
         setFiltered(parsed);
       })
       .catch(console.error);
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchBungalows();
+  }, [date]);
 
   useEffect(() => {
     let data = [...bungalows];
@@ -77,9 +84,11 @@ export default function Home() {
                     <span className="text-[14px] font-semibold text-white">In/ uitchecken</span>
                     <div className="rounded">
                       <input
-                        type="text"
+                        type="date"
+                        value={date}
+                        onChange={e => setDate(e.target.value)}
                         placeholder="Datum"
-                        className="w-[100px] bg-transparent text-[14px] text-white placeholder-white/60 outline-none"
+                        className="w-[130px] bg-transparent text-[14px] text-white placeholder-white/60 outline-none"
                       />
                     </div>
                   </div>

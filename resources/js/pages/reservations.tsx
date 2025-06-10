@@ -3,6 +3,7 @@ import React, { JSX, useEffect, useState } from "react";
 import { type SharedData } from '@/types';
 import { Head, usePage, Link } from '@inertiajs/react';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -80,6 +81,7 @@ export const Reservations = (): JSX.Element => {
                   <TableHead className="font-['Inter',Helvetica] font-semibold text-black text-sm">
                     Status
                   </TableHead>
+                  <TableHead className="font-['Inter',Helvetica] font-semibold text-black text-sm">Acties</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -114,6 +116,18 @@ export const Reservations = (): JSX.Element => {
                           {reservation.status}
                         </span>
                       </Badge>
+                    </TableCell>
+                    <TableCell className="space-x-2">
+                      <Button size="sm" onClick={async () => {
+                        await api.put(`/reservations/${reservation.id}`, { status: 'confirmed' });
+                        const res = await api.get('/reservations');
+                        setReservations(res.data);
+                      }}>Bevestig</Button>
+                      <Button size="sm" onClick={async () => {
+                        await api.put(`/reservations/${reservation.id}/cancel`);
+                        const res = await api.get('/reservations');
+                        setReservations(res.data);
+                      }} className="bg-red-600 hover:bg-red-700 text-white">Annuleer</Button>
                     </TableCell>
                   </TableRow>
                 ))}

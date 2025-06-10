@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Toaster, toast } from 'sonner';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ interface Bungalow {
   id: number;
   name: string;
   price: number;
+  amenities: Amenity[];
 }
 
 interface DiscountCode {
@@ -63,7 +65,15 @@ export default function CreateReserve() {
   });
 
   useEffect(() => {
-    api.get('/bungalows').then(res => setBungalows(res.data)).catch(console.error);
+    api.get('/bungalows')
+      .then(res => {
+        const parsed = res.data.map((b: any) => ({
+          ...b,
+          amenities: b.amenities || []
+        }));
+        setBungalows(parsed);
+      })
+      .catch(console.error);
     api.get('/discount-codes').then(res => setDiscountCodes(res.data)).catch(console.error);
     api.get('/amenities').then(res => setAmenities(res.data)).catch(console.error);
   }, []);
@@ -267,7 +277,7 @@ export default function CreateReserve() {
                   </div>
 
                   <div className="mt-4 space-y-2 text-black">
-                    {amenities.map(am => (
+                    {(sel.bungalow ? sel.bungalow.amenities : amenities).map(am => (
                       <div
                         key={am.name}
                         className="flex items-center space-x-3 cursor-pointer"

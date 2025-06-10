@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Full CRUD for Reservations, Bungalows, etc.
     Route::apiResource('reservations', ReservationController::class)->except(['store']); // Store is public
+    Route::put('reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
     Route::apiResource('bungalows', BungalowController::class)->except(['index', 'show']);
     Route::apiResource('amenities', AmenityController::class)->except(['index', 'show']);
     Route::apiResource('discount-codes', DiscountCodeController::class) ->except(['index', 'show']);
