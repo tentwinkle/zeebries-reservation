@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             BungalowSeeder::class,
             DiscountCodeSeeder::class,
             FlexiblePriceOptionSeeder::class,
+            SettingSeeder::class,
             ReservationSeeder::class,
         ]);
     }

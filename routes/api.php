@@ -9,7 +9,8 @@ use App\Http\Controllers\{
     AmenityController,
     DiscountCodeController,
     FlexiblePriceOptionController,
-    EmployeeController
+    EmployeeController,
+    SettingController
 };
 
 // =====================
@@ -37,4 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('amenities', AmenityController::class)->except(['index', 'show']);
     Route::apiResource('discount-codes', DiscountCodeController::class) ->except(['index', 'show']);
     Route::apiResource('flexible-price-options', FlexiblePriceOptionController::class);
+
+    // Dynamic pricing setting
+    Route::get('settings/dynamic-pricing', [SettingController::class, 'show']);
+    Route::put('settings/dynamic-pricing', [SettingController::class, 'update']);
 });

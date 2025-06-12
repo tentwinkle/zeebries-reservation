@@ -191,7 +191,7 @@ export default function CreateReserve() {
   };
 
   const calculateBungalowTotal = (sel: SelectedBungalow) => {
-    const basePrice = sel.bungalow ? Number(sel.bungalow.price) : 0;
+    const basePrice = sel.bungalow ? Number((sel.bungalow as any).current_price ?? sel.bungalow.price) : 0;
     const extras = sel.amenities.reduce((sum, a) => sum + Number(a.price), 0);
 
     // Calculate number of nights
@@ -259,7 +259,7 @@ export default function CreateReserve() {
                     <SelectContent>
                       {bungalows.map(bungalow => (
                         <SelectItem key={bungalow.id} value={String(bungalow.id)}>
-                          {bungalow.name} – €{bungalow.price}
+                          {bungalow.name} – €{bungalow.current_price}
                         </SelectItem>
                       ))}
                     </SelectContent>
