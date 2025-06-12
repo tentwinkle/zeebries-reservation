@@ -61,7 +61,8 @@ class ReservationController extends Controller
                 ->whereHas('bungalows', function ($q) use ($bungalow) {
                     $q->where('bungalow_id', $bungalow->id);
                 })->get();
-            $cost = ($bungalow->price * $nights) + $amenities->sum('price');
+            $price = $bungalow->currentPrice($data['start_date'], $data['end_date']);
+            $cost = ($price * $nights) + $amenities->sum('price');
 
             $resItem = $reservation->items()->create([
                 'bungalow_id' => $bungalow->id,
@@ -160,7 +161,8 @@ class ReservationController extends Controller
                     ->whereHas('bungalows', function ($q) use ($bungalow) {
                         $q->where('bungalow_id', $bungalow->id);
                     })->get();
-                $cost = ($bungalow->price * $nights) + $amenities->sum('price');
+                $price = $bungalow->currentPrice($reservation->start_date, $reservation->end_date);
+                $cost = ($price * $nights) + $amenities->sum('price');
                 $resItem = $reservation->items()->create([
                     'bungalow_id' => $bungalow->id,
                     'guests' => $item['guests'],

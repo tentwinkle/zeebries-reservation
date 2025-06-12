@@ -22,6 +22,7 @@ export const Dashboard = (): JSX.Element => {
   const [discountCodes, setDiscountCodes] = useState<any[]>([]);
   const [flexiblePriceOptions, setFlexiblePriceOptions] = useState<any[]>([]);
   const [bungalows, setBungalows] = useState<any[]>([]);
+  const [dynamicPricing, setDynamicPricing] = useState(false);
   const [newBungalow, setNewBungalow] = useState({
     name: '',
     imageFile: null as File | null,
@@ -42,6 +43,7 @@ export const Dashboard = (): JSX.Element => {
     api.get('/flexible-price-options').then(res => setFlexiblePriceOptions(res.data)).catch(console.error);
     api.get('/bungalows').then(res => setBungalows(res.data)).catch(console.error);
     api.get('/amenities').then(res => setAmenities(res.data)).catch(console.error);
+    api.get('/settings/dynamic-pricing').then(res => setDynamicPricing(res.data.dynamic_pricing)).catch(console.error);
     // api.get('/guests').then(res => setGuests(res.data)).catch(console.error);
   }, []);
 
@@ -86,6 +88,13 @@ export const Dashboard = (): JSX.Element => {
                 <img className="h-[35px] w-[35px] object-cover md:h-[45px] md:w-[45px]" alt="User account" src="/icons8-user-96-1.png" />
               </Link>
             )}
+            <Button onClick={async () => {
+              const newVal = !dynamicPricing;
+              await api.put('/settings/dynamic-pricing', { dynamic_pricing: newVal });
+              setDynamicPricing(newVal);
+            }} className="ml-4">
+              {dynamicPricing ? 'Dynamic On' : 'Dynamic Off'}
+            </Button>
           </header>
 
           {/* Dashboard Title */}
@@ -319,12 +328,28 @@ export const Dashboard = (): JSX.Element => {
                       <div className="flex gap-2">
                         <Button
                           size="icon"
+                          onClick={async () => {
+                            const codeVal = prompt('Code', code.code);
+                            if (!codeVal) return;
+                            const nameVal = prompt('Name', code.name);
+                            if (!nameVal) return;
+                            const perc = prompt('Percentage', String(code.percentage));
+                            if (!perc) return;
+                            await api.put(`/discount-codes/${code.id}`, { code: codeVal, name: nameVal, percentage: Number(perc) });
+                            const res = await api.get('/discount-codes');
+                            setDiscountCodes(res.data);
+                          }}
                           className="w-12 h-12 rounded-3xl bg-[#ff9800] hover:bg-[#e68a00]"
                         >
                           <PencilIcon className="w-[18px] h-[18px] text-white" />
                         </Button>
                         <Button
                           size="icon"
+                          onClick={async () => {
+                            await api.delete(`/discount-codes/${code.id}`);
+                            const res = await api.get('/discount-codes');
+                            setDiscountCodes(res.data);
+                          }}
                           className="w-12 h-12 rounded-3xl bg-[#a50500] hover:bg-[#940500]"
                         >
                           <TrashIcon className="w-5 h-5 text-white" />
@@ -338,6 +363,17 @@ export const Dashboard = (): JSX.Element => {
             <div className="flex justify-center mt-8">
               <Button
                 size="icon"
+                onClick={async () => {
+                  const codeVal = prompt('Code');
+                  if (!codeVal) return;
+                  const nameVal = prompt('Name');
+                  if (!nameVal) return;
+                  const perc = prompt('Percentage');
+                  if (!perc) return;
+                  await api.post('/discount-codes', { code: codeVal, name: nameVal, percentage: Number(perc) });
+                  const res = await api.get('/discount-codes');
+                  setDiscountCodes(res.data);
+                }}
                 className="w-12 h-12 rounded-3xl bg-[#00a508] hover:bg-[#009407]"
               >
                 <PlusIcon className="w-6 h-6 text-white" />
@@ -386,12 +422,28 @@ export const Dashboard = (): JSX.Element => {
                       <div className="flex gap-2">
                         <Button
                           size="icon"
+                          onClick={async () => {
+                            const modifier = prompt('Modifier', String(option.price_modifier));
+                            if (!modifier) return;
+                            const start = prompt('Start date', option.start_date);
+                            if (!start) return;
+                            const end = prompt('End date', option.end_date);
+                            if (!end) return;
+                            await api.put(`/flexible-price-options/${option.id}`, { price_modifier: Number(modifier), start_date: start, end_date: end });
+                            const res = await api.get('/flexible-price-options');
+                            setFlexiblePriceOptions(res.data);
+                          }}
                           className="w-12 h-12 rounded-3xl bg-[#ff9800] hover:bg-[#e68a00]"
                         >
                           <PencilIcon className="w-[18px] h-[18px] text-white" />
                         </Button>
                         <Button
                           size="icon"
+                          onClick={async () => {
+                            await api.delete(`/flexible-price-options/${option.id}`);
+                            const res = await api.get('/flexible-price-options');
+                            setFlexiblePriceOptions(res.data);
+                          }}
                           className="w-12 h-12 rounded-3xl bg-[#a50500] hover:bg-[#940500]"
                         >
                           <TrashIcon className="w-5 h-5 text-white" />
@@ -405,6 +457,19 @@ export const Dashboard = (): JSX.Element => {
             <div className="flex justify-center mt-8">
               <Button
                 size="icon"
+                onClick={async () => {
+                  const bungalowId = prompt('Bungalow ID');
+                  if (!bungalowId) return;
+                  const modifier = prompt('Modifier');
+                  if (!modifier) return;
+                  const start = prompt('Start date (YYYY-MM-DD)');
+                  if (!start) return;
+                  const end = prompt('End date (YYYY-MM-DD)');
+                  if (!end) return;
+                  await api.post('/flexible-price-options', { bungalow_id: Number(bungalowId), price_modifier: Number(modifier), start_date: start, end_date: end });
+                  const res = await api.get('/flexible-price-options');
+                  setFlexiblePriceOptions(res.data);
+                }}
                 className="w-12 h-12 rounded-3xl bg-[#00a508] hover:bg-[#009407]"
               >
                 <PlusIcon className="w-6 h-6 text-white" />
